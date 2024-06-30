@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from DiscordBlogBot.main import (fetch_latest_non_wp_blog_post,
+from SYNKABOT.main import (fetch_latest_non_wp_blog_post,
                                  fetch_latest_wp_blog_post)
 
 # Test parameters, see docstring of test_fetch_latest_wp_blog_post

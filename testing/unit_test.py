@@ -1,6 +1,6 @@
 import pytest
 
-from DiscordBlogBot.main import print_secret
+from SYNKABOT.main import print_secret
 
 
 @pytest.mark.unit
