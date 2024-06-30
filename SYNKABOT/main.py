@@ -75,9 +75,11 @@ async def regex_check(message:str)-> bool:
     pass
 
 async def send_warning(user_id:int):
+    # ephemeral message
     pass
 
 async def punishment(user_id:int, msg_id:int):
+    # ephemeral message + message removed
     pass
 
 async def consequences(user_id:int, msg_id: int,  message:str):
@@ -89,7 +91,8 @@ async def consequences(user_id:int, msg_id: int,  message:str):
         # wait for correctional edits after message (1 minute)
         await asyncio.sleep(60)
         # 5. no correction: remove message, add strike to user
-        await punishment(user_id, msg_id)
+        if not regex_check(message):
+            await punishment(user_id, msg_id)
 
 # Event decorator for discord bot to loop
 @tasks.loop(seconds=LOOP_SPEED)
