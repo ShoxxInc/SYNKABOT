@@ -64,7 +64,6 @@ The bot token contains a string of the bot token from Discord
 The Channel ID is the id of the channel you want the bot to post the messages in
 (see above on how to get the channel ID)
 
-
 ## Install and launch
 
 Make sure you have python (I recommend a virtual environment of at least 3.8) and

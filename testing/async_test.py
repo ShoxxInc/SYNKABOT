@@ -4,7 +4,7 @@ import aiohttp
 import pytest
 
 from SYNKABOT.main import (fetch_latest_non_wp_blog_post,
-                                 fetch_latest_wp_blog_post)
+                           fetch_latest_wp_blog_post)
 
 # Test parameters, see docstring of test_fetch_latest_wp_blog_post
 TEST_CASES_WP = [
