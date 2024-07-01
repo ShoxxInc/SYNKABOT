@@ -8,7 +8,7 @@ from typing import List, Tuple, Union
 # Installed Imports
 import aiohttp
 import discord
-from discord.abc import GuildChannel
+from discord import TextChannel
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+CHANNEL_ID = int(os.getenv("CHANNEL_ID_1"))
+
 
 LOOP_SPEED = 5
 
@@ -50,12 +51,12 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 async def send_latest_blog_post(
-    channel: GuildChannel,
+    channel: TextChannel,
     blog_info_to_be_printed: str
 ) -> None:
     """ Sends the printstring to the discord channel.
     Parameters:
-    channel (GuildChannel): GuildChannel object to send post to
+    channel (TextChannel): TextChannel object to send post to
     blog_info_to_be_printed (str): pre-generated string to send to channel
 
     Raises (Exception): if channel not found
@@ -67,19 +68,28 @@ async def send_latest_blog_post(
     else:
         raise Exception(f"Channel {channel} not found! GO FIX!")
 
-async def get_new_messages_from_channel(channel: GuildChannel)->List[Tuple[int, int, str]]:
+async def get_new_messages_from_channel(channel: TextChannel)->List[Tuple[int, int, str]]:
     # returns list of triplets of userID, messageID and Message string
-    pass
+    message = await channel.fetch_message(channel.last_message_id)
+    msg_id = message.id
+    user_id = message.author.id
+    message_content = message.content
+    return user_id, msg_id, message_content
 
 async def regex_check(message:str)-> bool:
-    pass
+    # regex pattern, currently checks for two double pipes.
+    regex_pattern = r"(\|\|)*(\|\|)"
+    # find matches
+    match = re.search(regex_pattern, message)
+    # cast to bool
+    return bool(match)
 
 async def send_warning(user_id:int):
-    # ephemeral message
+    # direct message
     pass
 
 async def punishment(user_id:int, msg_id:int):
-    # ephemeral message + message removed
+    # direct message + message removed
     pass
 
 async def consequences(user_id:int, msg_id: int,  message:str):
@@ -98,11 +108,11 @@ async def consequences(user_id:int, msg_id: int,  message:str):
 @tasks.loop(seconds=LOOP_SPEED)
 async def check_newest_messages(
     session: aiohttp.ClientSession,
-    channel: GuildChannel
+    channel: TextChannel
 ) -> None:
     """ Loops and calls fetchers and sender.
     Parameters:
-    channel (GuildChannel): GuildChannel object to send post to
+    channel (TextChannel): TextChannel object to send post to
     session (aiohttp.ClientSession): client session to make GET request
     """
     # TODO check session is alive at beginning of each loop
@@ -111,14 +121,16 @@ async def check_newest_messages(
     # 1. Check for new messages
     new_msg_list = await get_new_messages_from_channel(channel)
 
-    # 2. Iterate through messages:
-    for user_id, msg_id, message in new_msg_list:
+    print(new_msg_list)
+    if False:
+        # 2. Iterate through messages:
+        for user_id, msg_id, message in new_msg_list:
 
-        # 3. run regex on message
-        msg_valid = await regex_check(message)
+            # 3. run regex on message
+            msg_valid = await regex_check(message)
 
-        if not msg_valid:
-            await consequences(user_id, msg_id, message )
+            if not msg_valid:
+                await consequences(user_id, msg_id, message )
 
 
 # Event decorator for discord bots
