@@ -78,6 +78,8 @@ Tested on Windows and Linux Ubuntu
 
 ## Current TODO list
 
+- rewrite tests for Synkabot
+- fix async loop issue
 - DOCKERISE
 - change prints to logging
 - Error Handling

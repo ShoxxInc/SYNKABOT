@@ -48,25 +48,6 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-async def send_latest_blog_post(
-    channel: TextChannel,
-    blog_info_to_be_printed: str
-) -> None:
-    """ Sends the printstring to the discord channel.
-    Parameters:
-    channel (TextChannel): TextChannel object to send post to
-    blog_info_to_be_printed (str): pre-generated string to send to channel
-
-    Raises (Exception): if channel not found
-    """
-    # TODO replace with logger
-    print(blog_info_to_be_printed)
-    if channel:
-        await channel.send(blog_info_to_be_printed)
-    else:
-        raise Exception(f"Channel {channel} not found! GO FIX!")
-
-
 async def get_new_messages_from_channel(
         channel: TextChannel,
         num_of_messages: int
@@ -107,7 +88,7 @@ async def send_warning(dm_channel: DMChannel, message_content: str):
     channel = "Dark Room"
     await dm_channel.send(
         f"Warning! Your message in the spoiler channel {channel} with the" +
-        "content \"{message_content}\" was not properly put in spoilers. " +
+        f"content \"{message_content}\" was not properly put in spoilers. " +
         "Make sure every image is hidden and every piece of text is between " +
         "a pair of double pipes, e.g. \"\\|\\|spoiler\\|\\|\". You have 1 " +
         "minute to edit the post.")
@@ -121,14 +102,14 @@ async def punishment(dm_channel: DMChannel, message: Message):
 
 async def consequences(user_id: int, message: Message, channel: TextChannel):
     # wait for correctional edits (1 minute)
-    await asyncio.sleep(5)
+    await asyncio.sleep(60)
     if not await spoiler_check(message, channel):
         # 4. Send Warning in DM
         user = bot.get_user(user_id)
         dm_channel = await bot.create_dm(user)
         await send_warning(dm_channel, message.content)
         # wait for correctional edits after message (1 minute)
-        await asyncio.sleep(5)
+        await asyncio.sleep(60)
         # 5. no correction: remove message, add strike to user
         print(message.content)
         if not await spoiler_check(message, channel):
