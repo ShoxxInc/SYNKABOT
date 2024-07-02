@@ -6,7 +6,7 @@ import pytest
 from aioresponses import aioresponses
 from discord.ext import commands
 
-from DiscordBlogBot.main import blog_post_task, intents
+from SYNKABOT.main import blog_post_task, intents
 
 MOCK_BOT_TOKEN = "mock_bot_token"  # nosec
 
