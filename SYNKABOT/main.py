@@ -66,7 +66,7 @@ async def get_new_messages_from_channel(
 
 def regex_check(message: str) -> bool:
     # regex pattern, currently checks for two double pipes.
-    regex_pattern = r"(\|\|)*(\|\|)"
+    regex_pattern = r"^\s*(?:\|\|(?:[^|]|\|(?!\|))*?\|\|\s*)+\s*$"
     # find matches
     match = re.search(regex_pattern, message)
     # cast to bool
