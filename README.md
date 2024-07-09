@@ -63,7 +63,7 @@ CHANNEL_ID=INSERT CHANNEL ID HERE
 such that:  
 The bot token contains a string of the bot token from Discord  
 (see above on how to get the token)  
-The Channel ID is the id of the channel you want the bot to post the messages in
+The Channel ID is the id of the channel you want the bot to check the messages in
 (see above on how to get the channel ID)
 
 ## Install and launch
