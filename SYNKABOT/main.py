@@ -15,24 +15,23 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID_1"))
-
 SEEN_MESSAGES = []
-
 LOOP_SPEED = 5
+GLOBAL_SLEEP_TIMER = 60
 
 
 # printing hashes of secrets instead of secrets
 def print_secret(secret_to_hash: Union[int, str]) -> str:
-    """Returns MD5 hash of an input.
+    """Returns SHA256 hash of an input.
     Parameters:
     secret_to_hash (Union[int, str]) a secret whose hash should be printed
 
     Returns:
-    hexdigest (str) hexdigest of md5 of initial secret
+    hexdigest (str) hexdigest of SHA256 of initial secret
     """
     try:
         encoded_string = str(secret_to_hash).encode("utf-8")
-        hash_object = sha256(encoded_string, usedforsecurity=False)
+        hash_object = sha256(encoded_string)
     except TypeError as e:
         print(f"Trouble with encoding, generating rando instead. Error:{e}")
         from random import SystemRandom
@@ -47,26 +46,13 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-async def get_new_messages_from_channel(
-        channel: TextChannel,
-        num_of_messages: int
-        ) -> List[Message]:
-    # returns list of triplets of userID, messageID and Message string
-    global SEEN_MESSAGES
-    message_list = [
-        message
-        async for message in channel.history(limit=num_of_messages)
-        if message.id not in SEEN_MESSAGES
-        ]
-    new_messages = [message.id for message in message_list]
-    SEEN_MESSAGES = SEEN_MESSAGES + new_messages
-    return message_list
-
-
 def regex_check(message: str) -> bool:
-    # TODO quick hack to allow empty messages. To be incorporated into Regex
+    # TODO quick hack for edge cases not caught by regex.
+    # To be incorporated into Regex
     if message == "":
         return True
+    if message == "||||":
+        return False
     # regex pattern, currently checks for two double pipes.
     regex_pattern = r"^\s*(?:\|\|(?:[^|]|\|(?!\|))*?\|\|\s*)+\s*$"
     # find matches
@@ -104,14 +90,14 @@ async def punishment(dm_channel: DMChannel, message: Message):
 
 async def consequences(user_id: int, message: Message, channel: TextChannel):
     # wait for correctional edits (1 minute)
-    await asyncio.sleep(5)
+    await asyncio.sleep(GLOBAL_SLEEP_TIMER)
     if not await spoiler_check(message, channel):
         # 4. Send Warning in DM
         user = bot.get_user(user_id)
         dm_channel = await bot.create_dm(user)
         await send_warning(dm_channel, message.content)
         # wait for correctional edits after message (1 minute)
-        await asyncio.sleep(5)
+        await asyncio.sleep(GLOBAL_SLEEP_TIMER)
         # 5. no correction: remove message, add strike to user
         print(message.content)
         if not await spoiler_check(message, channel):
