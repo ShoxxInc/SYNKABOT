@@ -1,7 +1,9 @@
-# DiscordBlogBot
+# SYNKABOT
 
-Bot that posts new blog post announcements in given discord channel.
-Written by darkshoxx. Equipped with an MIT license, so enjoy distribution.
+Bot that ensures that all messages sent within a specific discord channel are
+properly hidden within spoiler tags
+Written by darkshoxx and DanBinder.
+Equipped with an MIT license, so enjoy distribution.
 
 ## Requirements
 
@@ -78,15 +80,12 @@ Tested on Windows and Linux Ubuntu
 
 ## Current TODO list
 
-- rewrite tests for Synkabot
-- fix async loop issue
+- improve tests for Synkabot
 - DOCKERISE
 - change prints to logging
 - Error Handling
 - Continue Github Actions
-- Annotate, Docstings in other files
 - Make better Readme
-- turn URL_Lists into Dataclasses
 
 ## Errors, problems
 
