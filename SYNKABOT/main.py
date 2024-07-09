@@ -6,34 +6,34 @@ from hashlib import sha256
 from typing import List, Union
 
 # Installed Imports
-import aiohttp
 import discord
 from discord import Attachment, DMChannel, Message, TextChannel
-from discord.ext import commands, tasks
+from discord.ext import commands
 from dotenv import load_dotenv
 
+# load environment variables
 load_dotenv()
 
+# Globals
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID_1"))
-
 SEEN_MESSAGES = []
-
 LOOP_SPEED = 5
+GLOBAL_SLEEP_TIMER = 60
 
 
 # printing hashes of secrets instead of secrets
 def print_secret(secret_to_hash: Union[int, str]) -> str:
-    """Returns MD5 hash of an input.
+    """Returns SHA256 hash of an input.
     Parameters:
     secret_to_hash (Union[int, str]) a secret whose hash should be printed
 
     Returns:
-    hexdigest (str) hexdigest of md5 of initial secret
+    hexdigest (str) hexdigest of SHA256 of initial secret
     """
     try:
         encoded_string = str(secret_to_hash).encode("utf-8")
-        hash_object = sha256(encoded_string, usedforsecurity=False)
+        hash_object = sha256(encoded_string)
     except TypeError as e:
         print(f"Trouble with encoding, generating rando instead. Error:{e}")
         from random import SystemRandom
@@ -48,23 +48,20 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-async def get_new_messages_from_channel(
-        channel: TextChannel,
-        num_of_messages: int
-        ) -> List[Message]:
-    # returns list of triplets of userID, messageID and Message string
-    global SEEN_MESSAGES
-    message_list = [
-        message
-        async for message in channel.history(limit=num_of_messages)
-        if message.id not in SEEN_MESSAGES
-        ]
-    new_messages = [message.id for message in message_list]
-    SEEN_MESSAGES = SEEN_MESSAGES + new_messages
-    return message_list
-
-
 def regex_check(message: str) -> bool:
+    """Checks message for spoiler contents.
+    Parameters:
+    message (str): message that needs to be spoilered strings and line breaks
+
+    Returns:
+    (bool) whether or not the message was spoilered correctly
+    """
+    # TODO quick hack for edge cases not caught by regex.
+    # To be incorporated into Regex
+    if message == "":
+        return True
+    if message == "||||":
+        return False
     # regex pattern, currently checks for two double pipes.
     regex_pattern = r"^\s*(?:\|\|(?:[^|]|\|(?!\|))*?\|\|\s*)+\s*$"
     # find matches
@@ -74,6 +71,13 @@ def regex_check(message: str) -> bool:
 
 
 def image_check(attachments: List[Attachment]) -> bool:
+    """Checks that all attachments have been spoiler tagged.
+    Parameters:
+    attachments: (List[Attachment]): list of images attached to the message
+
+    Returns:
+    (bool) whether or not the attachements were spoilered correctly
+    """
     return_value = True
     for attachment in attachments:
         # can abort if any check was False
@@ -84,7 +88,11 @@ def image_check(attachments: List[Attachment]) -> bool:
 
 
 async def send_warning(dm_channel: DMChannel, message_content: str):
-    # direct message
+    """CORO Sends a warning DM to poster of non-spoiled message
+    Parameters:
+    dm_channel: (DMChannel):    list of images attached to the message
+    message_content: (str):     bad message
+    """
     channel = "Dark Room"
     await dm_channel.send(
         f"Warning! Your message in the spoiler channel {channel} with the" +
@@ -95,70 +103,63 @@ async def send_warning(dm_channel: DMChannel, message_content: str):
 
 
 async def punishment(dm_channel: DMChannel, message: Message):
-    # direct message + message removed
+    """CORO Deletes the message and sends second warning DM
+    Parameters:
+    dm_channel: (DMChannel):    List of images attached to the message
+    messaget: (Message):        Message to delete
+    """
     await message.delete()
     await dm_channel.send("Consider this a warning! Message Deleted!")
 
 
 async def consequences(user_id: int, message: Message, channel: TextChannel):
-    # wait for correctional edits (1 minute)
-    await asyncio.sleep(60)
+    """CORO Checks that all attachments have been spoiler tagged.
+    Parameters:
+    user_id: (int):         id of user whose message was initially flagged.
+    message: (Message):     initially flagged message
+    channel: (TextChannel): channel in which violation occured
+    """
+    await asyncio.sleep(GLOBAL_SLEEP_TIMER)
     if not await spoiler_check(message, channel):
         # 4. Send Warning in DM
         user = bot.get_user(user_id)
         dm_channel = await bot.create_dm(user)
         await send_warning(dm_channel, message.content)
         # wait for correctional edits after message (1 minute)
-        await asyncio.sleep(60)
+        await asyncio.sleep(GLOBAL_SLEEP_TIMER)
         # 5. no correction: remove message, add strike to user
         print(message.content)
         if not await spoiler_check(message, channel):
             await punishment(dm_channel, message)
 
 
-# Event decorator for discord bot to loop
-@tasks.loop(seconds=LOOP_SPEED)
-async def check_newest_messages(
-    session: aiohttp.ClientSession,
-    channel: TextChannel
-) -> None:
-    """ Loops and calls fetchers and sender.
+async def treat_message(channel: TextChannel, message: Message):
+    """CORO Checks every message in the channel
     Parameters:
-    channel (TextChannel): TextChannel object to send post to
-    session (aiohttp.ClientSession): client session to make GET request
+    channel: (TextChannel): channel where a message was sent
+    message: (Message):     message that was sent
     """
-    # TODO check session is alive at beginning of each loop
-
-    # 1. Check for new messages
-    new_msg_list = await get_new_messages_from_channel(
-        channel,
-        num_of_messages=20
-        )
-
-    print([msg.content for msg in new_msg_list])
-
-    # 2. Iterate through messages:
-    # TODO: these should be handelled at the same time, but currently aren't
-    for message in new_msg_list:
-
-        await iterate_through_messages(channel, message)
-    print("END OF LOOP")
-
-
-async def iterate_through_messages(channel, message):
-    user_id = message.author.id
     message_content = message.content
 
-    # 3. run regex on message
+    # 3. run regex on message, check images
     allowed = await spoiler_check(message, channel)
     print(allowed, message_content, message.attachments)
 
     if not allowed:
+        user_id = message.author.id
         await consequences(user_id, message, channel)
 
 
 async def spoiler_check(message: Message, channel: TextChannel):
-    # update message contents
+    """Checks that both text and images are correctly spoilered.
+    Parameters:
+    channel: (TextChannel): channel where a message was sent
+    message: (Message):     message that was sent
+
+    Returns:
+    (bool): whether message is accepted or not
+    """
+    # update message contents, required because user may edit message.
     message = await channel.fetch_message(message.id)
 
     msg_valid = regex_check(message.content)
@@ -169,20 +170,23 @@ async def spoiler_check(message: Message, channel: TextChannel):
 # Event decorator for discord bots
 @bot.event
 async def on_ready():
-    """ Startup configurations.Gets session and channel object,
-        Populates the buffers.
-    """
+    """CORO Startup configurations. Send status message"""
     # Called once when the bot is initialized
     print(
         f"Logged in as {bot.user.name} with ID ({print_secret(bot.user.id)})"
     )
 
-    # Initialize aiohttp session
-    session = aiohttp.ClientSession()
-    # Get Discord Channel object
-    channel = bot.get_channel(CHANNEL_ID)
 
-    check_newest_messages.start(session, channel)
+@bot.event
+async def on_message(message: Message):
+    """CORO Event listener that catches every message sent on the server.
+    Parameters:
+    message: (Message): Message to treat"""
+    print(message)
+    # Only treat messages in the designated spoiler channel.
+    if message.channel.id == CHANNEL_ID:
+        await treat_message(message.channel, message)
+
 
 # so the file doesn't run when imported
 if __name__ == "__main__":
