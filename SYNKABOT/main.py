@@ -6,10 +6,9 @@ from hashlib import sha256
 from typing import List, Union
 
 # Installed Imports
-import aiohttp
 import discord
 from discord import Attachment, DMChannel, Message, TextChannel
-from discord.ext import commands, tasks
+from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -65,6 +64,9 @@ async def get_new_messages_from_channel(
 
 
 def regex_check(message: str) -> bool:
+    # TODO quick hack to allow empty messages. To be incorporated into Regex
+    if message == "":
+        return True
     # regex pattern, currently checks for two double pipes.
     regex_pattern = r"^\s*(?:\|\|(?:[^|]|\|(?!\|))*?\|\|\s*)+\s*$"
     # find matches
@@ -102,50 +104,21 @@ async def punishment(dm_channel: DMChannel, message: Message):
 
 async def consequences(user_id: int, message: Message, channel: TextChannel):
     # wait for correctional edits (1 minute)
-    await asyncio.sleep(60)
+    await asyncio.sleep(5)
     if not await spoiler_check(message, channel):
         # 4. Send Warning in DM
         user = bot.get_user(user_id)
         dm_channel = await bot.create_dm(user)
         await send_warning(dm_channel, message.content)
         # wait for correctional edits after message (1 minute)
-        await asyncio.sleep(60)
+        await asyncio.sleep(5)
         # 5. no correction: remove message, add strike to user
         print(message.content)
         if not await spoiler_check(message, channel):
             await punishment(dm_channel, message)
 
 
-# Event decorator for discord bot to loop
-@tasks.loop(seconds=LOOP_SPEED)
-async def check_newest_messages(
-    session: aiohttp.ClientSession,
-    channel: TextChannel
-) -> None:
-    """ Loops and calls fetchers and sender.
-    Parameters:
-    channel (TextChannel): TextChannel object to send post to
-    session (aiohttp.ClientSession): client session to make GET request
-    """
-    # TODO check session is alive at beginning of each loop
-
-    # 1. Check for new messages
-    new_msg_list = await get_new_messages_from_channel(
-        channel,
-        num_of_messages=20
-        )
-
-    print([msg.content for msg in new_msg_list])
-
-    # 2. Iterate through messages:
-    # TODO: these should be handelled at the same time, but currently aren't
-    for message in new_msg_list:
-
-        await iterate_through_messages(channel, message)
-    print("END OF LOOP")
-
-
-async def iterate_through_messages(channel, message):
+async def treat_message(channel, message):
     user_id = message.author.id
     message_content = message.content
 
@@ -177,12 +150,13 @@ async def on_ready():
         f"Logged in as {bot.user.name} with ID ({print_secret(bot.user.id)})"
     )
 
-    # Initialize aiohttp session
-    session = aiohttp.ClientSession()
-    # Get Discord Channel object
-    channel = bot.get_channel(CHANNEL_ID)
 
-    check_newest_messages.start(session, channel)
+@bot.event
+async def on_message(message: Message):
+    print(message)
+    if message.channel.id == CHANNEL_ID:
+        await treat_message(message.channel, message)
+
 
 # so the file doesn't run when imported
 if __name__ == "__main__":
